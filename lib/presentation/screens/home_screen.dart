@@ -16,7 +16,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   UserModel? _currentUser;
-  bool _isLoading = true; // Add loading state
+  User? _firebaseUser;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -26,20 +27,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = SharedPrefsService.getUser();
+      // Get user from SharedPreferences
+      final savedUser = await SharedPrefsService.getUser();
+
+      // Get current Firebase user for real-time data
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+
       if (mounted) {
         setState(() {
-          _currentUser = user;
+          _currentUser = savedUser;
+          _firebaseUser = firebaseUser;
           _isLoading = false;
         });
       }
+
+      // Print to console for debugging
+      _printUserDataToConsole();
+
     } catch (e) {
+      print('Error loading user data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     }
+  }
+
+  void _printUserDataToConsole() {
+    print('=== USER DATA DEBUG ===');
+    print('Firebase User UID: ${_firebaseUser?.uid}');
+    print('Firebase User Email: ${_firebaseUser?.email}');
+    print('Firebase Display Name: ${_firebaseUser?.displayName}');
+    print('Firebase Email Verified: ${_firebaseUser?.emailVerified}');
+    print('Firebase Photo URL: ${_firebaseUser?.photoURL}');
+    print('=====================');
+  }
+
+  // Get the display name with proper fallbacks
+  String get _displayName {
+    if (_currentUser?.displayName?.isNotEmpty == true) {
+      return _currentUser!.displayName!;
+    } else if (_firebaseUser?.displayName?.isNotEmpty == true) {
+      return _firebaseUser!.displayName!;
+    }
+    return 'Welcome Back!';
+  }
+
+  // Get the email with proper fallbacks
+  String get _userEmail {
+    if (_currentUser?.email?.isNotEmpty == true) {
+      return _currentUser!.email!;
+    } else if (_firebaseUser?.email?.isNotEmpty == true) {
+      return _firebaseUser!.email!;
+    }
+    return 'No email available';
+  }
+
+  // Check if email is verified
+  bool get _isEmailVerified {
+    return _firebaseUser?.emailVerified ?? false;
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -117,9 +164,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: _currentUser?.photoURL != null
+                child: _firebaseUser?.photoURL != null
                     ? CircleAvatar(
-                  backgroundImage: NetworkImage(_currentUser!.photoURL!),
+                  backgroundImage: NetworkImage(_firebaseUser!.photoURL!),
                 )
                     : const Icon(
                   Icons.person,
@@ -133,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _currentUser?.displayName ?? 'Welcome Back!',
+                      _displayName,
                       style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 22,
@@ -142,16 +189,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _currentUser?.email ?? 'No email',
+                      _userEmail,
                       style: TextStyle(
                         color: AppColors.white.withOpacity(0.9),
                         fontSize: 14,
                       ),
                     ),
-                    if (_currentUser?.lastLogin != null) ...[
+                    if (_firebaseUser?.metadata.lastSignInTime != null) ...[
                       const SizedBox(height: 6),
                       Text(
-                        'Last login: ${_getFormattedDate(_currentUser!.lastLogin!)}',
+                        'Last login: ${_getFormattedDate(_firebaseUser!.metadata.lastSignInTime!)}',
                         style: TextStyle(
                           color: AppColors.white.withOpacity(0.8),
                           fontSize: 12,
@@ -164,37 +211,33 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.white.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _currentUser?.isEmailVerified ?? false
-                      ? Icons.verified
-                      : Icons.warning_amber_rounded,
-                  color: AppColors.white,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _currentUser?.isEmailVerified ?? false
-                      ? 'Verified Account'
-                      : 'Verify Email',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          //   decoration: BoxDecoration(
+          //     color: AppColors.white.withOpacity(0.2),
+          //     borderRadius: BorderRadius.circular(20),
+          //     border: Border.all(color: AppColors.white.withOpacity(0.3)),
+          //   ),
+          //   // child: Row(
+          //   //   mainAxisSize: MainAxisSize.min,
+          //   //   children: [
+          //   //     Icon(
+          //   //       _isEmailVerified ? Icons.verified : Icons.warning_amber_rounded,
+          //   //       color: AppColors.white,
+          //   //       size: 18,
+          //   //     ),
+          //   //     const SizedBox(width: 8),
+          //   //     Text(
+          //   //       _isEmailVerified ? 'Verified Account' : 'Verify Email',
+          //   //       style: const TextStyle(
+          //   //         color: AppColors.white,
+          //   //         fontSize: 13,
+          //   //         fontWeight: FontWeight.w500,
+          //   //       ),
+          //   //     ),
+          //   //   ],
+          //   // ),
+          // ),
         ],
       ),
     );
@@ -560,6 +603,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _formatUserModel(UserModel user) {
+    return '''
+UID: ${user.uid}
+Email: ${user.email ?? 'Not set'}
+Display Name: ${user.displayName ?? 'Not set'}
+Created: ${user.createdAt ?? 'Not set'}
+''';
+  }
+
+  String _formatFirebaseUser(User user) {
+    return '''
+UID: ${user.uid}
+Email: ${user.email ?? 'Not set'}
+Display Name: ${user.displayName ?? 'Not set'}
+Email Verified: ${user.emailVerified}
+Photo URL: ${user.photoURL ?? 'Not set'}
+Is Anonymous: ${user.isAnonymous}
+Last Sign In: ${user.metadata.lastSignInTime ?? 'Not available'}
+Account Created: ${user.metadata.creationTime ?? 'Not available'}
+Provider Data: ${user.providerData.map((p) => '${p.providerId}: ${p.email}').join(', ')}
+''';
+  }
+
   Widget _buildDashboard(BuildContext context) {
     if (_isLoading) {
       return const Center(
@@ -580,6 +646,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 28),
           _buildQuickActions(),
           const SizedBox(height: 28),
+
+          const SizedBox(height: 28),
+
           // Recent Activity Section
           Card(
             elevation: 4,
