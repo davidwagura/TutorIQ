@@ -18,7 +18,7 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
 
   static const String _apiBaseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-  static const String _apiKey = 'AIzaSyDcYz1u5tARRFlXG5kS6Hrhj2NZ3petI0g';
+  static const String _apiKey = '';
 
   @override
   void initState() {
