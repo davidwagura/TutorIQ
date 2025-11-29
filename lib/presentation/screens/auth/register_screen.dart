@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:quickalert/models/quickalert_type.dart';
+import 'package:quickalert/widgets/quickalert_dialog.dart';
 import 'package:tutoriq/presentation/assets/colors.dart' as colors;
 import 'package:tutoriq/presentation/screens/auth/login_screen.dart';
 import 'package:tutoriq/presentation/shared/shared_button.dart';
@@ -40,12 +42,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration successful! Please log in.'),
-          backgroundColor: colors.AppColors.successGreen,
-          behavior: SnackBarBehavior.floating,
-        ),
+      // Show success alert
+      await QuickAlert.show(
+        context: context,
+        type: QuickAlertType.success,
+        title: 'Success',
+        text: 'Registration successful! Please log in.',
+        autoCloseDuration: const Duration(seconds: 2),
       );
 
       Navigator.pushAndRemoveUntil(
@@ -67,10 +70,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       if (!mounted) return;
-      _showErrorSnackBar(errorMessage);
+
+      await QuickAlert.show(
+        context: context,
+        type: QuickAlertType.error,
+        title: 'Error',
+        text: errorMessage,
+        autoCloseDuration: const Duration(seconds: 3),
+      );
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('An error occurred: $e');
+
+      await QuickAlert.show(
+        context: context,
+        type: QuickAlertType.error,
+        title: 'Error',
+        text: 'An error occurred. Please try again.',
+        autoCloseDuration: const Duration(seconds: 3),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -78,16 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: colors.AppColors.errorRed,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   void _navigateToLogin() {
@@ -122,20 +129,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Create Account',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colors.AppColors.primaryPurple,
-            fontSize: 32,
+        Center(
+          child: Text(
+            'Create Account',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colors.AppColors.primaryPurple,
+              fontSize: 32,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Join TutorIQ today',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: colors.AppColors.darkGrey,
-            fontSize: 16,
+        Center(
+          child: Text(
+            'Join TutorIQ today',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: colors.AppColors.darkGrey,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],

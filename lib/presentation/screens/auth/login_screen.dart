@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:quickalert/models/quickalert_type.dart';
+import 'package:quickalert/widgets/quickalert_dialog.dart';
 import 'package:tutoriq/data/models/user_model.dart';
 import 'package:tutoriq/data/services/shared_prefs_service.dart';
 import 'package:tutoriq/presentation/screens/auth/register_screen.dart';
@@ -52,6 +54,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (!mounted) return;
 
+        // Show success alert
+        await QuickAlert.show(
+          context: context,
+          type: QuickAlertType.success,
+          title: 'Success',
+          text: 'Login successful!',
+          autoCloseDuration: const Duration(seconds: 2),
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -70,10 +81,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      _showErrorSnackBar(errorMessage);
+      await QuickAlert.show(
+        context: context,
+        type: QuickAlertType.error,
+        title: 'Error',
+        text: errorMessage,
+        autoCloseDuration: const Duration(seconds: 3),
+      );
     } catch (e) {
       if (!mounted) return;
-      _showErrorSnackBar('An error occurred. Please try again.');
+      await QuickAlert.show(
+        context: context,
+        type: QuickAlertType.error,
+        title: 'Error',
+        text: 'An error occurred. Please try again.',
+        autoCloseDuration: const Duration(seconds: 3),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -81,16 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: colors.AppColors.errorRed,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   void _navigateToRegister() {
@@ -125,20 +138,26 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Welcome Back',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colors.AppColors.primaryPurple,
-            fontSize: 32,
+        Center(
+          child: Text(
+            'Welcome Back',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colors.AppColors.primaryPurple,
+              fontSize: 32,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Sign in to continue with TutorIQ',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: colors.AppColors.darkGrey,
-            fontSize: 16,
+        Center(
+          child: Text(
+            'Sign in to continue with TutorIQ',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: colors.AppColors.darkGrey,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
