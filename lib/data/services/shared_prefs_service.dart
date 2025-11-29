@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
@@ -6,6 +8,7 @@ class SharedPrefsService {
   static const String _isLoggedInKey = 'is_logged_in';
   static const String _themeKey = 'app_theme';
   static const String _firstLaunchKey = 'first_launch';
+  static const String _conversationsKey = 'ai_conversations';
 
   static late SharedPreferences _prefs;
 
@@ -70,5 +73,40 @@ class SharedPrefsService {
   // Clear all data
   static Future<void> clearAll() async {
     await _prefs.clear();
+  }
+
+  // Conversation methods
+  static Future<void> saveConversations(List<Map<String, dynamic>> messages) async {
+    try {
+      final messagesJson = messages.map((message) => json.encode(message)).toList();
+      await _prefs.setStringList(_conversationsKey, messagesJson);
+    } catch (e) {
+      print('Error saving conversations: $e');
+    }
+  }
+
+  static List<Map<String, dynamic>> getConversations() {
+    try {
+      final messagesJson = _prefs.getStringList(_conversationsKey);
+      if (messagesJson == null || messagesJson.isEmpty) {
+        return [];
+      }
+
+      return messagesJson.map((jsonString) {
+        final decoded = json.decode(jsonString);
+        // Convert timestamp string back to DateTime
+        if (decoded['timestamp'] != null) {
+          decoded['timestamp'] = DateTime.parse(decoded['timestamp']);
+        }
+        return decoded as Map<String, dynamic>;
+      }).toList();
+    } catch (e) {
+      print('Error loading conversations: $e');
+      return [];
+    }
+  }
+
+  static Future<void> clearConversations() async {
+    await _prefs.remove(_conversationsKey);
   }
 }

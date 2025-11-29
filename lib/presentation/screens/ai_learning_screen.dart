@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../data/services/shared_prefs_service.dart';
 
 class AiLearningScreen extends StatefulWidget {
   const AiLearningScreen({super.key});
@@ -13,22 +16,67 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
-  bool _isSending = false; // New state specifically for send button
+  bool _isSending = false;
   final ScrollController _scrollController = ScrollController();
 
   static const String _apiBaseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-  static const String _apiKey = '';
+  static const String _apiKey = 'AIzaSyBOvJNbN6p3T4jlpQZzZuSVQFOkSFdhUAw';
 
   @override
   void initState() {
     super.initState();
-    // Add welcome message
-    _messages.add({
-      'role': 'ai',
-      'text': 'Hello! I\'m your TutorIQ AI assistant. How can I help you with your studies today?',
-      'timestamp': DateTime.now(),
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    try {
+      // Initialize SharedPreferences if not already done
+      await SharedPrefsService.init();
+
+      final savedMessages = SharedPrefsService.getConversations();
+
+      if (savedMessages.isNotEmpty) {
+        setState(() {
+          _messages.addAll(savedMessages);
+        });
+        _scrollToBottom();
+      } else {
+        // Add welcome message only if no saved conversations
+        _addWelcomeMessage();
+      }
+    } catch (e) {
+      print('Error loading conversations: $e');
+      _addWelcomeMessage();
+    }
+  }
+
+  void _addWelcomeMessage() {
+    setState(() {
+      _messages.add({
+        'role': 'ai',
+        'text': 'Hello! I\'m your TutorIQ AI assistant. How can I help you with your studies today?',
+        'timestamp': DateTime.now(),
+      });
     });
+    _saveConversations();
+  }
+
+  Future<void> _saveConversations() async {
+    try {
+      // Convert DateTime to string for JSON serialization
+      final messagesToSave = _messages.map((message) {
+        final messageCopy = Map<String, dynamic>.from(message);
+        if (messageCopy['timestamp'] is DateTime) {
+          messageCopy['timestamp'] = messageCopy['timestamp'].toIso8601String();
+        }
+        return messageCopy;
+      }).toList();
+
+      await SharedPrefsService.saveConversations(messagesToSave);
+    } catch (e) {
+      print('Error saving conversations: $e');
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -41,12 +89,13 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
         'text': userMessage,
         'timestamp': DateTime.now(),
       });
-      _isLoading = true; // For the chat loading indicator
-      _isSending = true; // For the send button state
+      _isLoading = true;
+      _isSending = true;
     });
 
     _controller.clear();
     _scrollToBottom();
+    _saveConversations(); // Save after user message
 
     try {
       final response = await _callTutorApi(userMessage);
@@ -60,6 +109,7 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
         _isLoading = false;
         _isSending = false;
       });
+      _saveConversations(); // Save after AI response
     } catch (e) {
       setState(() {
         _messages.add({
@@ -70,13 +120,13 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
         _isLoading = false;
         _isSending = false;
       });
+      _saveConversations(); // Save even if there's an error
     }
 
     _scrollToBottom();
   }
 
   Future<String> _callTutorApi(String userMessage) async {
-    // Use the base URL without additional query parameters
     final url = Uri.parse(_apiBaseUrl);
 
     final response = await http.post(
@@ -105,7 +155,6 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
       final data = json.decode(response.body);
 
       try {
-        // Handle Gemini's response structure
         if (data["candidates"] != null &&
             data["candidates"].isNotEmpty &&
             data["candidates"][0]["content"] != null &&
@@ -137,14 +186,48 @@ class _AiLearningScreenState extends State<AiLearningScreen> {
   }
 
   void _clearChat() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Clear Conversation'),
+          content: const Text('Are you sure you want to clear all messages? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _performClearChat();
+              },
+              child: const Text(
+                'Clear',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _performClearChat() async {
     setState(() {
       _messages.clear();
+    });
+    await SharedPrefsService.clearConversations();
+
+    // Add welcome message after clearing
+    setState(() {
       _messages.add({
         'role': 'ai',
         'text': 'Hello! I\'m your TutorIQ AI assistant. How can I help you with your studies today?',
         'timestamp': DateTime.now(),
       });
     });
+    _saveConversations(); // Save the new welcome message
   }
 
   Widget _buildMessage(Map<String, dynamic> message) {
