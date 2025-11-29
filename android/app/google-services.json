@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "279269621648",
+    "project_id": "tutoriq2",
+    "storage_bucket": "tutoriq2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:279269621648:android:c1f4c53bf2fa21170cfd15",
+        "android_client_info": {
+          "package_name": "com.example.tutoriq2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQx51FPcxucKEAqxug_YReUFu2rhjHAJc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
